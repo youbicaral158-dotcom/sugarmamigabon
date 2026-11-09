@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Administration — SUGARMAMI GABON TEST</title>
+<style>
+body{margin:0;background:#090b10;color:#f7f3e9;font:15px Arial}.wrap{max-width:1000px;margin:auto;padding:24px}
+h1,h2{color:#d7b66e}.card{background:#151d29;border:1px solid #30394a;border-radius:14px;padding:18px;margin:16px 0}
+input{display:block;max-width:100%;width:100%;padding:12px;background:#090e16;border:1px solid #39465b;color:white;border-radius:8px;margin:8px 0}
+button{padding:10px 15px;border:0;border-radius:20px;background:#d7b66e;font-weight:bold;cursor:pointer;margin:4px}
+.item{border-top:1px solid #39465b;padding:15px 0}.muted{color:#b0b7c2}.notice{padding:14px;border:1px solid #a9823e;background:#302719;color:#ffe4a8;border-radius:10px}
+</style></head><body><main class="wrap">
+<h1>SUGARMAMI GABON — Administration de test</h1>
+<div class="notice"><strong>MODE TEST :</strong> aucun paiement, justificatif ou accès VIP payant ne peut être traité ici.</div>
+<section id="login" class="card"><h2>Connexion administrateur</h2>
+<label for="email">E-mail administrateur</label><input id="email" type="email" autocomplete="username">
+<label for="password">Mot de passe</label><input id="password" type="password" autocomplete="current-password">
+<button id="loginBtn" type="button">Connexion</button><p id="error" role="status"></p></section>
+<section id="dash" class="card" hidden><h2>Membres de test</h2><button id="refreshBtn" type="button">Actualiser</button><div id="members"></div></section>
+</main><script>
+const $=id=>document.getElementById(id);
+async function api(url,options={}){const r=await fetch(url,{...options,credentials:"same-origin"});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||"Erreur");return d;}
+async function loginAdmin(){
+ try{
+  const d=await api("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:$("email").value,password:$("password").value})});
+  if(!d.user||!["owner","admin"].includes(d.user.role)){await api("/api/logout",{method:"POST"});throw Error("Ce compte n'a pas les droits administrateur.");}
+  $("login").hidden=true;$("dash").hidden=false;await load();
+ }catch(e){$("error").textContent=e.message;}
+}
+async function load(){
+ try{
+  const d=await api("/api/admin/members");const root=$("members");root.replaceChildren();
+  if(!d.members.length){const p=document.createElement("p");p.textContent="Aucun membre inscrit pour le moment.";root.append(p);return;}
+  for(const member of d.members){
+   const box=document.createElement("div");box.className="item";
+   const line=document.createElement("p");
+   line.textContent=`${member.name} — ${member.email} — ${member.role} — Compte VIP : ${member.vip?"Oui":"Non"} — Créé le : ${member.created_at}`;
+   box.append(line);root.append(box);
+  }
+ }catch(e){$("error").textContent=e.message;}
+}
+$("loginBtn").addEventListener("click",loginAdmin);
+$("refreshBtn").addEventListener("click",load);
+(async()=>{try{const d=await api("/api/me");if(d.user&&["owner","admin"].includes(d.user.role)){$("login").hidden=true;$("dash").hidden=false;await load();}}catch(e){}})();
+</script></body></html>

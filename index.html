@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SUGARMAMI GABON — version de test</title>
+<style>
+:root{--bg:#090b10;--p:#151d29;--gold:#d7b66e;--txt:#f7f3e9;--muted:#b0b7c2;--line:#30394a}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 80% 0,#1b2a3d,#090b10 60%);color:var(--txt);font:16px Arial;line-height:1.55}
+.wrap{max-width:900px;margin:auto;padding:25px 18px}.brand{letter-spacing:3px;font-weight:900;color:var(--gold)}
+h1{font-size:clamp(38px,7vw,62px);line-height:1.05}h2{color:var(--gold)}
+.muted{color:var(--muted)}.card{background:var(--p);border:1px solid var(--line);border-radius:17px;padding:20px;margin:16px 0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}label{display:block;font-weight:bold;margin:12px 0 6px}
+input:not([type=checkbox]){width:100%;padding:13px;border:1px solid #39465b;border-radius:9px;background:#090e16;color:white}
+input[type=checkbox]{accent-color:var(--gold)}button,.btn{display:inline-block;border:0;border-radius:999px;padding:13px 18px;background:var(--gold);color:#151515;font-weight:bold;cursor:pointer;text-decoration:none;margin-top:12px}
+.secondary{background:#29364a;color:white}.status{background:#202a39;padding:13px;border-radius:10px;margin-top:12px}
+.notice{border:1px solid #a9823e;background:#302719;color:#ffe4a8;padding:16px;border-radius:12px;margin:18px 0}
+.hidden{display:none}.small{font-size:13px}@media(max-width:620px){.grid{grid-template-columns:1fr}}
+</style></head>
+<body><main class="wrap">
+<div class="brand">SUGARMAMI GABON</div>
+<p class="muted">Espace de démonstration — réservé aux adultes de 20 ans et plus</p>
+<div class="notice"><strong>VERSION DE TEST — PAS DE VRAI PAIEMENT</strong><br>Ne transférez aucun argent. N'envoyez aucune capture de paiement ni document personnel. Les paiements, justificatifs et accès aux groupes VIP sont désactivés.</div>
+<h1>Bienvenue sur<br><span style="color:var(--gold)">SUGAR MAMY GABON.</span></h1>
+<p class="muted">Cette version sert uniquement à tester la création de compte, la connexion et l'espace membre. Elle n'est pas ouverte aux transactions commerciales.</p>
+<section id="auth" class="card">
+<h2>Créer un compte / Connexion</h2>
+<div class="grid">
+<div><h3>Inscription de test</h3>
+<label for="rn">Pseudonyme</label><input id="rn" maxlength="50" autocomplete="nickname">
+<label for="re">E-mail</label><input id="re" type="email" autocomplete="email">
+<label for="rp">Mot de passe (12 caractères minimum)</label><input id="rp" type="password" minlength="12" autocomplete="new-password">
+<p><label><input id="age" type="checkbox"> Je confirme avoir au moins 20 ans.</label>
+<label><input id="rules" type="checkbox"> J'accepte les règles de respect et de confidentialité pour ce test.</label></p>
+<button id="registerBtn" type="button">Créer mon compte de test</button>
+</div>
+<div><h3>Déjà inscrit ?</h3>
+<label for="le">E-mail</label><input id="le" type="email" autocomplete="username">
+<label for="lp">Mot de passe</label><input id="lp" type="password" autocomplete="current-password">
+<button class="secondary" id="loginBtn" type="button">Se connecter</button>
+</div></div><p id="authmsg" class="status hidden" role="status"></p>
+</section>
+<section id="member" class="card hidden">
+<h2>Bienvenue <span id="memberName"></span></h2>
+<div class="notice">Ton compte est connecté en mode test. Aucun paiement ne peut être effectué et aucun statut VIP payant n'est attribué dans cette version.</div>
+<p id="memberStatus" class="status"></p>
+<button class="secondary" id="logoutBtn" type="button">Déconnexion</button>
+</section>
+<p id="msg" class="status hidden" role="status"></p>
+<p class="small muted">Version de test : n'utilisez pas votre mot de passe habituel et ne saisissez aucune information bancaire ou personnelle sensible.</p>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+async function api(url, options={}) {
+  const response = await fetch(url, {...options, credentials:"same-origin"});
+  const data = await response.json().catch(()=>({}));
+  if (!response.ok) throw new Error(data.error || "Une erreur est survenue.");
+  return data;
+}
+function message(id, value) { const el=$(id); el.textContent=value; el.classList.remove("hidden"); }
+function show(user) {
+  $("auth").classList.add("hidden"); $("member").classList.remove("hidden");
+  $("memberName").textContent=user.name;
+  $("memberStatus").textContent="Connexion réussie. Version de test active — paiements désactivés.";
+}
+async function register() {
+  try {
+    const data=await api("/api/register",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({name:$("rn").value,email:$("re").value,password:$("rp").value,ageConfirmed:$("age").checked,termsAccepted:$("rules").checked})});
+    show(data.user);
+  } catch(e) { message("authmsg",e.message); }
+}
+async function login() {
+  try {
+    const data=await api("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({email:$("le").value,password:$("lp").value})});
+    show(data.user);
+  } catch(e) { message("authmsg",e.message); }
+}
+async function logout() {
+  try { await api("/api/logout",{method:"POST"}); location.reload(); }
+  catch(e) { message("msg",e.message); }
+}
+$("registerBtn").addEventListener("click",register);
+$("loginBtn").addEventListener("click",login);
+$("logoutBtn").addEventListener("click",logout);
+(async()=>{try{const data=await api("/api/me");if(data.user)show(data.user);}catch(e){}})();
+</script></body></html>
